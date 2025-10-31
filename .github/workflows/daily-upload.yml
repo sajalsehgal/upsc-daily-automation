@@ -16,11 +16,15 @@ jobs:
       with:
         python-version: '3.10'
     
-    - name: Install dependencies
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg --fix-missing
+    
+    - name: Install Python dependencies
       run: |
         pip install feedparser requests pillow azure-cognitiveservices-speech python-dotenv beautifulsoup4 openai
         pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client
-        sudo apt-get install -y ffmpeg
     
     - name: Create .env
       run: |
