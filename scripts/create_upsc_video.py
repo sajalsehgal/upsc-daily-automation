@@ -206,7 +206,7 @@ class UPSCVideoCreator:
         return True
     
     def create_background_with_text(self, date_str, output_path):
-        """Create educational background with date and channel info"""
+        """Create educational background with LARGE readable text"""
         img = Image.new('RGB', (self.width, self.height), color='#1a1a2e')
         draw = ImageDraw.Draw(img)
         
@@ -217,51 +217,65 @@ class UPSCVideoCreator:
             b = int(46 + (78 - 46) * (y / self.height))
             draw.line([(0, y), (self.width, y)], fill=(r, g, b))
         
-        # Tricolor border
-        border_thickness = 15
+        # Tricolor border (thicker)
+        border_thickness = 20
         draw.rectangle([(0, 0), (self.width, border_thickness)], fill='#FF9933')
         draw.rectangle([(0, border_thickness), (self.width, border_thickness * 2)], fill='#FFFFFF')
+        draw.rectangle([(0, self.height - border_thickness * 2), (self.width, self.height - border_thickness)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border_thickness), (self.width, self.height)], fill='#138808')
         
-        # Load fonts
+        # Load fonts - MUCH LARGER
         try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 90)
-            subtitle_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 50)
-            date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 45)
+            # Increased font sizes significantly
+            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 140)
+            subtitle_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 80)
+            date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 70)
         except:
-            title_font = ImageFont.load_default()
-            subtitle_font = ImageFont.load_default()
-            date_font = ImageFont.load_default()
+            try:
+                title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 140)
+                subtitle_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 80)
+                date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 70)
+            except:
+                title_font = ImageFont.load_default()
+                subtitle_font = ImageFont.load_default()
+                date_font = ImageFont.load_default()
         
-        # Main title
+        # Main title - centered
         title_text = "Daily Current Affairs"
         title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
         title_width = title_bbox[2] - title_bbox[0]
         title_x = (self.width - title_width) // 2
+        title_y = 350
         
-        # Shadow
-        draw.text((title_x + 3, 380), title_text, font=title_font, fill=(0, 0, 0))
+        # Shadow for better readability
+        shadow_offset = 5
+        draw.text((title_x + shadow_offset, title_y + shadow_offset), title_text, font=title_font, fill=(0, 0, 0))
         # Main text
-        draw.text((title_x, 377), title_text, font=title_font, fill=(255, 255, 255))
+        draw.text((title_x, title_y), title_text, font=title_font, fill=(255, 255, 255))
         
-        # Subtitle
+        # Subtitle - centered
         subtitle_text = "UPSC & सरकारी परीक्षा"
         subtitle_bbox = draw.textbbox((0, 0), subtitle_text, font=subtitle_font)
         subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
         subtitle_x = (self.width - subtitle_width) // 2
+        subtitle_y = 520
         
-        draw.text((subtitle_x, 490), subtitle_text, font=subtitle_font, fill=(255, 200, 100))
+        draw.text((subtitle_x + 3, subtitle_y + 3), subtitle_text, font=subtitle_font, fill=(0, 0, 0))
+        draw.text((subtitle_x, subtitle_y), subtitle_text, font=subtitle_font, fill=(255, 200, 100))
         
-        # Date
+        # Date - centered
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
         date_display = date_obj.strftime('%d %B %Y')
         date_bbox = draw.textbbox((0, 0), date_display, font=date_font)
         date_width = date_bbox[2] - date_bbox[0]
         date_x = (self.width - date_width) // 2
+        date_y = 640
         
-        draw.text((date_x, 580), date_display, font=date_font, fill=(200, 200, 200))
+        draw.text((date_x + 3, date_y + 3), date_display, font=date_font, fill=(0, 0, 0))
+        draw.text((date_x, date_y), date_display, font=date_font, fill=(220, 220, 220))
         
         img.save(output_path, quality=95)
+        print(f"✅ Background created with large readable text")
         return output_path
     
     def create_video(self, audio_path, background_path, output_path):
