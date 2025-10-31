@@ -1,5 +1,5 @@
 """
-Generate UPSC script - DETAILED Hindi explanations
+Generate UPSC script - REAL detailed Hindi news explanations
 """
 import os
 import json
@@ -23,113 +23,120 @@ class UPSCScriptGenerator:
             return json.load(f)
     
     def generate_single_news_item(self, news_article, item_number):
-        """Generate ONE detailed news explanation"""
+        """Generate ONE detailed news in PURE Hindi"""
         
         news_numbers_hindi = ["पहली", "दूसरी", "तीसरी", "चौथी", "पांचवीं", 
                              "छठी", "सातवीं", "आठवीं", "नौवीं", "दसवीं"]
         
         title = news_article.get('title', '')
-        summary = news_article.get('summary', '')[:800]  # Use more of summary
+        summary = news_article.get('summary', '')[:1000]
         
-        prompt = f"""You are a UPSC educator. Explain this news in DETAILED Hindi (NOT just headline).
+        prompt = f"""You are a UPSC teacher explaining news in conversational Hindi to students.
 
-News: {title}
+English News: {title}
 Details: {summary}
 
-Write EXACTLY 120-150 words in this format:
+Write EXACTLY 150-180 words in conversational Hindi:
 
 {news_numbers_hindi[item_number-1]} खबर।
-[Write a DETAILED explanation in 6-7 complete Hindi sentences covering:
-- What exactly happened (specific details)
-- Who was involved (names, positions)
-- Where did it happen (locations)
-- When did it happen (dates if available)
-- Why is it important for India/world
-- What are the implications
-- Key facts students should remember]
-UPSC में यह General Studies Paper 1, 2, या 3 में [specific topic like अंतर्राष्ट्रीय संबंध, भारतीय अर्थव्यवस्था, पर्यावरण, विज्ञान और प्रौद्योगिकी, शासन] से पूछा जा सकता है।
+[Translate the title to simple Hindi first, then explain in 7-8 complete sentences:
+- What exactly happened (translate all English content to Hindi)
+- Who was involved (names can stay in English, everything else in Hindi)
+- Where and when did it happen
+- Why is this important for students
+- What are the key facts
+- What could be the implications
+DO NOT use generic phrases like "mahatvapurna jankari mili hai" or "khabar jaldi milegi"
+DO NOT say "UPSC mein pucha ja sakta hai" at the end
+Just explain the news naturally like a teacher explaining to students in a classroom]
 
 CRITICAL RULES:
-- Write in SIMPLE CONVERSATIONAL HINDI (like talking to a friend)
-- Do NOT just translate the English headline
-- EXPLAIN the news in detail
-- Use Hindi for everything except proper nouns (WHO, NASA, GDP, names)
-- Must be 120-150 words
-- Write as if you're a teacher explaining to students
+1. Write EVERYTHING in Hindi except:
+   - Proper names (people, organizations, places)
+   - Acronyms (WHO, NATO, GDP, etc.)
+2. DO NOT translate the English headline as-is - explain it naturally in Hindi
+3. DO NOT use filler phrases or generic statements
+4. Focus on ACTUAL NEWS DETAILS from the summary
+5. 150-180 words minimum
+6. Conversational tone - like talking to a friend
+7. DO NOT end with "UPSC mein pucha ja sakta hai" - just give facts
 
-Write the detailed explanation now:"""
+Write detailed Hindi explanation now:"""
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 0.8,
-                "maxOutputTokens": 800
+                "temperature": 0.9,
+                "maxOutputTokens": 1000
             }
         }
         
         try:
-            response = requests.post(self.api_url, json=payload, timeout=90)
+            response = requests.post(self.api_url, json=payload, timeout=120)
             
             if response.status_code != 200:
-                print(f" ❌ API Error")
-                return self.create_fallback_item(news_article, item_number)
+                print(f" ❌")
+                return self.create_better_fallback(news_article, item_number)
             
             result = response.json()
             
             if 'candidates' not in result or not result['candidates']:
-                print(f" ❌ No response")
-                return self.create_fallback_item(news_article, item_number)
+                print(f" ❌")
+                return self.create_better_fallback(news_article, item_number)
             
             candidate = result['candidates'][0]
             
             if 'content' not in candidate or 'parts' not in candidate['content']:
-                print(f" ❌ Invalid format")
-                return self.create_fallback_item(news_article, item_number)
+                print(f" ❌")
+                return self.create_better_fallback(news_article, item_number)
             
             text = candidate['content']['parts'][0]['text'].strip()
             
-            # Verify it's actually in Hindi and detailed
+            # Check quality
             word_count = len(text.split())
-            if word_count < 80:
-                print(f" ⚠️  Too short ({word_count} words), retrying...")
-                time.sleep(2)
-                # Retry once
-                response = requests.post(self.api_url, json=payload, timeout=90)
-                if response.status_code == 200:
-                    result = response.json()
-                    if 'candidates' in result and result['candidates']:
-                        text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+            
+            # Remove the UPSC line if Gemini added it
+            if "UPSC" in text or "upsc" in text or "पूछा जा सकता है" in text:
+                lines = text.split('\n')
+                text = '\n'.join([line for line in lines if 'UPSC' not in line and 'upsc' not in line and 'पूछा जा सकता है' not in line])
+            
+            if word_count < 100:
+                print(f" ⚠️  ({word_count}w)")
+                return self.create_better_fallback(news_article, item_number)
             
             return text
             
         except Exception as e:
-            print(f" ❌ Exception: {e}")
-            return self.create_fallback_item(news_article, item_number)
+            print(f" ❌")
+            return self.create_better_fallback(news_article, item_number)
     
-    def create_fallback_item(self, news_article, item_number):
-        """Create a basic fallback if API fails"""
+    def create_better_fallback(self, news_article, item_number):
+        """Better fallback with actual content"""
         news_numbers_hindi = ["पहली", "दूसरी", "तीसरी", "चौथी", "पांचवीं", 
                              "छठी", "सातवीं", "आठवीं", "नौवीं", "दसवीं"]
         
+        title = news_article.get('title', 'समाचार')
+        summary = news_article.get('summary', '')[:300]
+        
+        # At least provide some content
         return f"""{news_numbers_hindi[item_number-1]} खबर।
-{news_article.get('title', 'समाचार')} के बारे में आज महत्वपूर्ण जानकारी मिली है। यह खबर भारत और अंतर्राष्ट्रीय संबंधों के लिए महत्वपूर्ण है। विस्तृत जानकारी जल्द ही उपलब्ध होगी।
-UPSC में यह सामान्य अध्ययन से पूछा जा सकता है।"""
+{title}। यह खबर हाल ही में सामने आई है। {summary if summary else 'विस्तृत जानकारी शीघ्र उपलब्ध होगी।'}"""
     
     def generate_hindi_script(self, news_data):
-        """Generate complete detailed script"""
+        """Generate complete detailed Hindi script"""
         
         articles = news_data['articles']
         date_hindi = news_data.get('date_hindi', datetime.now().strftime('%d %B %Y'))
         
-        print("\n🤖 Generating DETAILED Hindi script...")
-        print("   Creating comprehensive explanations...\n")
+        print("\n🤖 Generating detailed Hindi script...")
+        print("   Creating natural explanations...\n")
         
         # Intro
-        intro = f"""नमस्ते दोस्तों! आज की तारीख है {date_hindi}। आज हम देखेंगे Top 10 Current Affairs जो आपकी UPSC और सरकारी परीक्षा की तैयारी के लिए बहुत जरूरी हैं। हर खबर को मैं विस्तार से समझाऊंगा। तो चलिए शुरू करते हैं।
+        intro = f"""नमस्ते दोस्तों! आज की तारीख है {date_hindi}। आज हम देखेंगे Top 10 Current Affairs जो आपकी UPSC और सरकारी परीक्षा की तैयारी के लिए बहुत महत्वपूर्ण हैं। हर खबर को मैं विस्तार से समझाऊंगा। तो चलिए शुरू करते हैं।
 
 """
         
-        # Generate 10 detailed news items
+        # Generate 10 news items
         news_items = []
         for i in range(10):
             print(f"   News {i+1}/10...", end='')
@@ -139,30 +146,26 @@ UPSC में यह सामान्य अध्ययन से पूछ�
                 news_items.append(item)
                 print(" ✓")
             else:
-                print(" ⚠️  No article")
+                print(" ⚠️")
                 break
             
-            # Delay between requests
             if i < 9:
-                time.sleep(3)  # Longer delay to avoid rate limits
+                time.sleep(3)
         
         # Outro
         outro = """
 
-तो दोस्तों, यह थे आज के Top 10 Current Affairs जो मैंने विस्तार से समझाए। PDF notes के लिए description में link देखें। अगर video helpful लगा तो like करें, share करें, और channel को subscribe करना मत भूलिए। Bell icon भी press कर दें ताकि रोज़ notification मिल जाए। कल फिर मिलेंगे नई खबरों के साथ। तब तक के लिए, पढ़ते रहिए। धन्यवाद!"""
+तो दोस्तों, यह थे आज के Top 10 Current Affairs। Description में PDF notes का link मिलेगा। अगर video helpful लगा तो like करें, share करें, और channel को subscribe करना मत भूलिए। Bell icon भी दबा दें। कल फिर मिलेंगे नई खबरों के साथ। धन्यवाद!"""
         
         # Combine
         script = intro + "\n\n".join(news_items) + outro
         
         word_count = len(script.split())
         
-        print(f"\n✅ Detailed script generated!")
+        print(f"\n✅ Script generated!")
         print(f"   News items: {len(news_items)}")
-        print(f"   Total words: {word_count}")
-        print(f"   Est. duration: {word_count / 130:.1f} minutes")
-        
-        if word_count < 1500:
-            print(f"   ⚠️  Warning: Script might be too short!")
+        print(f"   Words: {word_count}")
+        print(f"   Duration: ~{word_count / 130:.1f} minutes")
         
         return script
     
@@ -190,11 +193,6 @@ def main():
     
     output_path = f'output/upsc/scripts/script_{date_str}.txt'
     generator.save_script(script, output_path)
-    
-    print(f"\n📝 Preview:")
-    print("-" * 70)
-    print(script[:700])
-    print("-" * 70)
 
 if __name__ == "__main__":
     main()

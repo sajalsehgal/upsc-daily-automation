@@ -1,5 +1,5 @@
 """
-Create UPSC video with CLEAN professional backgrounds
+Create UPSC video - BRIGHT clean backgrounds, NO flag
 """
 import os
 import subprocess
@@ -37,21 +37,21 @@ class UPSCVideoCreator:
         )
     
     def get_news_background_from_pexels(self, output_path):
-        """Get CLEAN professional background"""
+        """Get bright professional background - NO FLAG"""
         
         if not self.pexels_key:
-            print("⚠️  No Pexels key, using gradient")
             return self.create_professional_gradient(output_path)
         
+        # Professional news/business queries - NO FLAG
         queries = [
-            "india gate night",
-            "mumbai skyline evening",
-            "delhi skyline sunset",
-            "taj mahal golden hour",
-            "indian parliament building",
-            "gateway of india sunset",
-            "bangalore skyline night",
-            "india cityscape dusk"
+            "mumbai skyline sunset",
+            "delhi modern architecture",
+            "bangalore tech city night",
+            "india modern cityscape",
+            "business district night",
+            "urban skyline india",
+            "modern india buildings",
+            "indian metro city lights"
         ]
         
         query = random.choice(queries)
@@ -67,13 +67,11 @@ class UPSCVideoCreator:
             )
             
             if response.status_code != 200:
-                print(f"   ⚠️  API failed, using gradient")
                 return self.create_professional_gradient(output_path)
             
             data = response.json()
             
             if not data.get('photos'):
-                print(f"   ⚠️  No images, using gradient")
                 return self.create_professional_gradient(output_path)
             
             photo = random.choice(data['photos'])
@@ -87,15 +85,13 @@ class UPSCVideoCreator:
             
             print(f"   ✅ Downloaded")
             
-            # Process for clean look
-            return self.process_background_clean(img_path, output_path)
+            return self.process_background_bright(img_path, output_path)
             
         except Exception as e:
-            print(f"   ⚠️  Error, using gradient")
             return self.create_professional_gradient(output_path)
     
-    def process_background_clean(self, image_path, output_path):
-        """Process image for CLEAN professional look"""
+    def process_background_bright(self, image_path, output_path):
+        """Process image - BRIGHT and CLEAN"""
         
         img = Image.open(image_path)
         
@@ -116,44 +112,42 @@ class UPSCVideoCreator:
             top = (new_height - self.height) // 2
             img = img.crop((0, top, self.width, top + self.height))
         
-        # Make darker for better text readability (NO BLUR)
+        # Keep it BRIGHT - only slight darkening
         enhancer = ImageEnhance.Brightness(img)
-        img = enhancer.enhance(0.35)  # Much darker
+        img = enhancer.enhance(0.65)  # 65% brightness - much brighter!
         
-        # Add solid dark overlay for better text area
-        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 180))
+        # Light overlay for subtle effect
+        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 100))  # Light overlay
         img = img.convert('RGBA')
         img = Image.alpha_composite(img, overlay)
         img = img.convert('RGB')
         
-        # Add tricolor borders
+        # Tricolor borders - thicker and prominent
         draw = ImageDraw.Draw(img)
-        border = 30
+        border = 35
         draw.rectangle([(0, 0), (self.width, border)], fill='#FF9933')
         draw.rectangle([(0, border), (self.width, border * 2)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border * 2), (self.width, self.height - border)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border), (self.width, self.height)], fill='#138808')
         
-        # NO TEXT ON IMAGE - Keep it clean!
-        
         img.save(output_path, quality=95)
-        print(f"   ✅ Clean background ready")
+        print(f"   ✅ Bright clean background")
         return output_path
     
     def create_professional_gradient(self, output_path):
-        """Clean professional gradient background"""
-        img = Image.new('RGB', (self.width, self.height), color='#0a1628')
+        """Professional gradient - bright and clean"""
+        img = Image.new('RGB', (self.width, self.height), color='#1a2540')
         draw = ImageDraw.Draw(img)
         
-        # Smooth gradient
+        # Brighter gradient
         for y in range(self.height):
-            r = int(10 + (25 - 10) * (y / self.height))
-            g = int(16 + (40 - 16) * (y / self.height))
-            b = int(40 + (70 - 40) * (y / self.height))
+            r = int(26 + (45 - 26) * (y / self.height))
+            g = int(37 + (60 - 37) * (y / self.height))
+            b = int(64 + (90 - 64) * (y / self.height))
             draw.line([(0, y), (self.width, y)], fill=(r, g, b))
         
         # Tricolor borders
-        border = 30
+        border = 35
         draw.rectangle([(0, 0), (self.width, border)], fill='#FF9933')
         draw.rectangle([(0, border), (self.width, border * 2)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border * 2), (self.width, self.height - border)], fill='#FFFFFF')
@@ -163,33 +157,48 @@ class UPSCVideoCreator:
         return output_path
     
     def create_thumbnail(self, date_str, output_path):
-        """Create thumbnail"""
-        img = Image.new('RGB', (1280, 720), color='#FFFFFF')
+        """Thumbnail - simple and clean"""
+        img = Image.new('RGB', (1280, 720), color='#1a2540')
         draw = ImageDraw.Draw(img)
         
-        draw.rectangle([(0, 0), (1280, 240)], fill='#FF9933')
-        draw.rectangle([(0, 240), (1280, 480)], fill='#FFFFFF')
-        draw.rectangle([(0, 480), (1280, 720)], fill='#138808')
+        # Gradient background
+        for y in range(720):
+            r = int(26 + (45 - 26) * (y / 720))
+            g = int(37 + (60 - 37) * (y / 720))
+            b = int(64 + (90 - 64) * (y / 720))
+            draw.line([(0, y), (1280, y)], fill=(r, g, b))
         
-        center_x, center_y = 640, 360
-        radius = 80
-        draw.ellipse([(center_x - radius, center_y - radius),
-                      (center_x + radius, center_y + radius)], fill='#000080')
+        # Tricolor borders
+        border = 25
+        draw.rectangle([(0, 0), (1280, border)], fill='#FF9933')
+        draw.rectangle([(0, border), (1280, border * 2)], fill='#FFFFFF')
+        draw.rectangle([(0, 720 - border * 2), (1280, 720 - border)], fill='#FFFFFF')
+        draw.rectangle([(0, 720 - border), (1280, 720)], fill='#138808')
         
         try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 90)
-            date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 55)
+            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 100)
+            date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 60)
         except:
             title_font = date_font = ImageFont.load_default()
         
+        # Title with shadow
         title_text = "Daily Current Affairs"
         title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-        draw.text(((1280 - (title_bbox[2] - title_bbox[0])) // 2, 80), title_text, font=title_font, fill=(0, 0, 0))
+        title_w = title_bbox[2] - title_bbox[0]
+        title_x = (1280 - title_w) // 2
         
+        draw.text((title_x + 4, 284), title_text, font=title_font, fill=(0, 0, 0))
+        draw.text((title_x, 280), title_text, font=title_font, fill=(255, 255, 255))
+        
+        # Date
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
         date_display = date_obj.strftime('%d %B %Y')
         date_bbox = draw.textbbox((0, 0), date_display, font=date_font)
-        draw.text(((1280 - (date_bbox[2] - date_bbox[0])) // 2, 580), date_display, font=date_font, fill=(255, 255, 255))
+        date_w = date_bbox[2] - date_bbox[0]
+        date_x = (1280 - date_w) // 2
+        
+        draw.text((date_x + 3, 423), date_display, font=date_font, fill=(0, 0, 0))
+        draw.text((date_x, 420), date_display, font=date_font, fill=(255, 200, 80))
         
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         img.save(output_path, quality=95)
@@ -242,7 +251,6 @@ class UPSCVideoCreator:
             return result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted
                 
         except Exception as e:
-            print(f"\nException: {e}")
             return False
     
     def generate_audio(self, script, output_path):
