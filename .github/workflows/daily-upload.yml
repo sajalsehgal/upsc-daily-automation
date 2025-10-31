@@ -2,9 +2,8 @@ name: Daily UPSC Current Affairs
 
 on:
   schedule:
-    # Run every day at 1:00 AM UTC (6:30 AM IST)
-    - cron: '0 1 * * *'
-  workflow_dispatch:  # Manual trigger
+    - cron: '0 1 * * *'  # 6:30 AM IST
+  workflow_dispatch:
 
 jobs:
   create-and-upload:
@@ -30,6 +29,7 @@ jobs:
         echo "AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}" >> .env
         echo "AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}" >> .env
         echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+        echo "PEXELS_API_KEY=${{ secrets.PEXELS_API_KEY }}" >> .env
     
     - name: Create YouTube credentials
       run: |
