@@ -1,11 +1,12 @@
 """
-Generate UPSC script - with proper error handling
+Generate UPSC script - DETAILED Hindi explanations
 """
 import os
 import json
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
 
@@ -21,117 +22,147 @@ class UPSCScriptGenerator:
         with open(news_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     
-    def generate_single_news_item(self, news_article, item_number, date_hindi):
-        """Generate ONE news item with error handling"""
+    def generate_single_news_item(self, news_article, item_number):
+        """Generate ONE detailed news explanation"""
         
         news_numbers_hindi = ["पहली", "दूसरी", "तीसरी", "चौथी", "पांचवीं", 
                              "छठी", "सातवीं", "आठवीं", "नौवीं", "दसवीं"]
         
-        prompt = f"""You are writing ONE news item for a UPSC Current Affairs video in Hindi.
+        title = news_article.get('title', '')
+        summary = news_article.get('summary', '')[:800]  # Use more of summary
+        
+        prompt = f"""You are a UPSC educator. Explain this news in DETAILED Hindi (NOT just headline).
 
-News Article:
-Title: {news_article['title']}
-Summary: {news_article.get('summary', '')}
+News: {title}
+Details: {summary}
 
-Write EXACTLY in this format (100-120 words):
+Write EXACTLY 120-150 words in this format:
 
 {news_numbers_hindi[item_number-1]} खबर।
-[Write 5-6 complete sentences explaining what happened, where, why it's important, and key facts to remember]
-UPSC के Prelims और Mains में यह [specific topic] से पूछा जा सकता है।
+[Write a DETAILED explanation in 6-7 complete Hindi sentences covering:
+- What exactly happened (specific details)
+- Who was involved (names, positions)
+- Where did it happen (locations)
+- When did it happen (dates if available)
+- Why is it important for India/world
+- What are the implications
+- Key facts students should remember]
+UPSC में यह General Studies Paper 1, 2, या 3 में [specific topic like अंतर्राष्ट्रीय संबंध, भारतीय अर्थव्यवस्था, पर्यावरण, विज्ञान और प्रौद्योगिकी, शासन] से पूछा जा सकता है।
 
-Use simple conversational Hindi. Include specific details.
+CRITICAL RULES:
+- Write in SIMPLE CONVERSATIONAL HINDI (like talking to a friend)
+- Do NOT just translate the English headline
+- EXPLAIN the news in detail
+- Use Hindi for everything except proper nouns (WHO, NASA, GDP, names)
+- Must be 120-150 words
+- Write as if you're a teacher explaining to students
 
-Write only this one news item:"""
+Write the detailed explanation now:"""
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 500
+                "temperature": 0.8,
+                "maxOutputTokens": 800
             }
         }
         
         try:
-            response = requests.post(self.api_url, json=payload, timeout=60)
+            response = requests.post(self.api_url, json=payload, timeout=90)
             
             if response.status_code != 200:
-                print(f"\n   ❌ API Error {response.status_code}: {response.text}")
-                return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']} के बारे में जानकारी संकलित की जा रही है।\n"
+                print(f" ❌ API Error")
+                return self.create_fallback_item(news_article, item_number)
             
             result = response.json()
             
-            # Check for errors in response
-            if 'candidates' not in result:
-                print(f"\n   ❌ No candidates in response: {result}")
-                return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']}।\n"
-            
-            if not result['candidates']:
-                print(f"\n   ❌ Empty candidates")
-                return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']}।\n"
+            if 'candidates' not in result or not result['candidates']:
+                print(f" ❌ No response")
+                return self.create_fallback_item(news_article, item_number)
             
             candidate = result['candidates'][0]
             
-            if 'content' not in candidate:
-                print(f"\n   ❌ No content in candidate: {candidate}")
-                return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']}।\n"
-            
-            if 'parts' not in candidate['content']:
-                print(f"\n   ❌ No parts in content: {candidate['content']}")
-                return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']}।\n"
+            if 'content' not in candidate or 'parts' not in candidate['content']:
+                print(f" ❌ Invalid format")
+                return self.create_fallback_item(news_article, item_number)
             
             text = candidate['content']['parts'][0]['text'].strip()
+            
+            # Verify it's actually in Hindi and detailed
+            word_count = len(text.split())
+            if word_count < 80:
+                print(f" ⚠️  Too short ({word_count} words), retrying...")
+                time.sleep(2)
+                # Retry once
+                response = requests.post(self.api_url, json=payload, timeout=90)
+                if response.status_code == 200:
+                    result = response.json()
+                    if 'candidates' in result and result['candidates']:
+                        text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+            
             return text
             
         except Exception as e:
-            print(f"\n   ❌ Exception: {e}")
-            return f"{news_numbers_hindi[item_number-1]} खबर।\n{news_article['title']} पर विस्तृत जानकारी जल्द उपलब्ध होगी।\n"
+            print(f" ❌ Exception: {e}")
+            return self.create_fallback_item(news_article, item_number)
+    
+    def create_fallback_item(self, news_article, item_number):
+        """Create a basic fallback if API fails"""
+        news_numbers_hindi = ["पहली", "दूसरी", "तीसरी", "चौथी", "पांचवीं", 
+                             "छठी", "सातवीं", "आठवीं", "नौवीं", "दसवीं"]
+        
+        return f"""{news_numbers_hindi[item_number-1]} खबर।
+{news_article.get('title', 'समाचार')} के बारे में आज महत्वपूर्ण जानकारी मिली है। यह खबर भारत और अंतर्राष्ट्रीय संबंधों के लिए महत्वपूर्ण है। विस्तृत जानकारी जल्द ही उपलब्ध होगी।
+UPSC में यह सामान्य अध्ययन से पूछा जा सकता है।"""
     
     def generate_hindi_script(self, news_data):
-        """Generate complete script"""
+        """Generate complete detailed script"""
         
         articles = news_data['articles']
         date_hindi = news_data.get('date_hindi', datetime.now().strftime('%d %B %Y'))
         
-        print("\n🤖 Generating script with GUARANTEED 10 news items...")
-        print("   Generating each item individually...\n")
+        print("\n🤖 Generating DETAILED Hindi script...")
+        print("   Creating comprehensive explanations...\n")
         
         # Intro
-        intro = f"""नमस्ते दोस्तों! आज की तारीख है {date_hindi}। आज हम देखेंगे Top 10 Current Affairs जो आपकी UPSC और सरकारी परीक्षा की तैयारी के लिए बहुत जरूरी हैं। तो चलिए शुरू करते हैं।
+        intro = f"""नमस्ते दोस्तों! आज की तारीख है {date_hindi}। आज हम देखेंगे Top 10 Current Affairs जो आपकी UPSC और सरकारी परीक्षा की तैयारी के लिए बहुत जरूरी हैं। हर खबर को मैं विस्तार से समझाऊंगा। तो चलिए शुरू करते हैं।
 
 """
         
-        # Generate 10 news items
+        # Generate 10 detailed news items
         news_items = []
         for i in range(10):
-            print(f"   Generating news item {i+1}/10...", end=' ')
+            print(f"   News {i+1}/10...", end='')
             
             if i < len(articles):
-                item = self.generate_single_news_item(articles[i], i+1, date_hindi)
+                item = self.generate_single_news_item(articles[i], i+1)
                 news_items.append(item)
-                print("✓")
+                print(" ✓")
             else:
-                print("⚠️  No article")
+                print(" ⚠️  No article")
                 break
             
             # Delay between requests
             if i < 9:
-                import time
-                time.sleep(2)
+                time.sleep(3)  # Longer delay to avoid rate limits
         
         # Outro
         outro = """
 
-तो दोस्तों, यह थे आज के Top 10 Current Affairs। PDF notes के लिए description में link देखें। Video पसंद आया तो like और subscribe करें। Bell icon press कर दें। कल फिर मिलेंगे। धन्यवाद!"""
+तो दोस्तों, यह थे आज के Top 10 Current Affairs जो मैंने विस्तार से समझाए। PDF notes के लिए description में link देखें। अगर video helpful लगा तो like करें, share करें, और channel को subscribe करना मत भूलिए। Bell icon भी press कर दें ताकि रोज़ notification मिल जाए। कल फिर मिलेंगे नई खबरों के साथ। तब तक के लिए, पढ़ते रहिए। धन्यवाद!"""
         
         # Combine
         script = intro + "\n\n".join(news_items) + outro
         
         word_count = len(script.split())
         
-        print(f"\n✅ Script generated!")
+        print(f"\n✅ Detailed script generated!")
         print(f"   News items: {len(news_items)}")
-        print(f"   Words: {word_count}")
+        print(f"   Total words: {word_count}")
         print(f"   Est. duration: {word_count / 130:.1f} minutes")
+        
+        if word_count < 1500:
+            print(f"   ⚠️  Warning: Script might be too short!")
         
         return script
     
@@ -162,7 +193,7 @@ def main():
     
     print(f"\n📝 Preview:")
     print("-" * 70)
-    print(script[:600])
+    print(script[:700])
     print("-" * 70)
 
 if __name__ == "__main__":

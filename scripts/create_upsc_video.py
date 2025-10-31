@@ -1,10 +1,10 @@
 """
-Create UPSC video with professional Pexels images
+Create UPSC video with CLEAN professional backgrounds
 """
 import os
 import subprocess
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 import time
@@ -37,29 +37,26 @@ class UPSCVideoCreator:
         )
     
     def get_news_background_from_pexels(self, output_path):
-        """Get professional news background from Pexels"""
+        """Get CLEAN professional background"""
         
         if not self.pexels_key:
-            print("⚠️  No Pexels API key, using solid background")
-            return self.create_solid_background(output_path)
+            print("⚠️  No Pexels key, using gradient")
+            return self.create_professional_gradient(output_path)
         
-        # News-style search queries
         queries = [
             "india gate night",
-            "mumbai skyline night",
-            "delhi parliament building",
-            "indian flag waving",
-            "india cityscape",
-            "gateway of india",
-            "india modern city",
-            "taj mahal sunset",
-            "indian government building",
-            "india news studio"
+            "mumbai skyline evening",
+            "delhi skyline sunset",
+            "taj mahal golden hour",
+            "indian parliament building",
+            "gateway of india sunset",
+            "bangalore skyline night",
+            "india cityscape dusk"
         ]
         
         query = random.choice(queries)
         
-        print(f"   Fetching image: '{query}'...")
+        print(f"   Fetching: '{query}'...")
         
         try:
             headers = {"Authorization": self.pexels_key}
@@ -70,160 +67,97 @@ class UPSCVideoCreator:
             )
             
             if response.status_code != 200:
-                print(f"   ⚠️  Pexels API failed, using solid background")
-                return self.create_solid_background(output_path)
+                print(f"   ⚠️  API failed, using gradient")
+                return self.create_professional_gradient(output_path)
             
             data = response.json()
             
             if not data.get('photos'):
-                print(f"   ⚠️  No images found, using solid background")
-                return self.create_solid_background(output_path)
+                print(f"   ⚠️  No images, using gradient")
+                return self.create_professional_gradient(output_path)
             
-            # Get random image from results
             photo = random.choice(data['photos'])
             image_url = photo['src']['large2x']
             
-            # Download image
             img_response = requests.get(image_url, timeout=10)
-            img_path = output_path.replace('.png', '_original.jpg')
+            img_path = output_path.replace('.png', '_temp.jpg')
             
             with open(img_path, 'wb') as f:
                 f.write(img_response.content)
             
-            print(f"   ✅ Downloaded: {query}")
+            print(f"   ✅ Downloaded")
             
-            # Process image
-            return self.process_background_image(img_path, output_path)
+            # Process for clean look
+            return self.process_background_clean(img_path, output_path)
             
         except Exception as e:
-            print(f"   ⚠️  Error: {e}, using solid background")
-            return self.create_solid_background(output_path)
+            print(f"   ⚠️  Error, using gradient")
+            return self.create_professional_gradient(output_path)
     
-    def process_background_image(self, image_path, output_path):
-        """Process Pexels image for video background"""
+    def process_background_clean(self, image_path, output_path):
+        """Process image for CLEAN professional look"""
         
         img = Image.open(image_path)
         
-        # Resize and crop to 1920x1080
+        # Resize to exact dimensions
         img_ratio = img.width / img.height
         target_ratio = self.width / self.height
         
         if img_ratio > target_ratio:
-            # Image is wider, crop width
             new_height = self.height
             new_width = int(new_height * img_ratio)
             img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Center crop
             left = (new_width - self.width) // 2
             img = img.crop((left, 0, left + self.width, self.height))
         else:
-            # Image is taller, crop height
             new_width = self.width
             new_height = int(new_width / img_ratio)
             img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Center crop
             top = (new_height - self.height) // 2
             img = img.crop((0, top, self.width, top + self.height))
         
-        # Darken image for better text visibility
+        # Make darker for better text readability (NO BLUR)
         enhancer = ImageEnhance.Brightness(img)
-        img = enhancer.enhance(0.5)  # 50% darker
+        img = enhancer.enhance(0.35)  # Much darker
         
-        # Add slight blur
-        img = img.filter(ImageFilter.GaussianBlur(radius=2))
-        
-        # Add dark overlay
-        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 120))
+        # Add solid dark overlay for better text area
+        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 180))
         img = img.convert('RGBA')
         img = Image.alpha_composite(img, overlay)
         img = img.convert('RGB')
         
         # Add tricolor borders
         draw = ImageDraw.Draw(img)
-        border = 25
+        border = 30
         draw.rectangle([(0, 0), (self.width, border)], fill='#FF9933')
         draw.rectangle([(0, border), (self.width, border * 2)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border * 2), (self.width, self.height - border)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border), (self.width, self.height)], fill='#138808')
         
-        # Add text overlay
-        try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 200)
-            subtitle_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 110)
-            date_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 85)
-        except:
-            title_font = subtitle_font = date_font = ImageFont.load_default()
-        
-        # Add semi-transparent background for text
-        text_bg = Image.new('RGBA', (self.width, 500), (0, 0, 0, 180))
-        img.paste(text_bg, (0, 300), text_bg)
-        
-        draw = ImageDraw.Draw(img)
-        
-        # Title
-        title_text = "Daily Current Affairs"
-        title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-        title_w = title_bbox[2] - title_bbox[0]
-        title_x = (self.width - title_w) // 2
-        title_y = 350
-        
-        # Shadow
-        draw.text((title_x + 8, title_y + 8), title_text, font=title_font, fill=(0, 0, 0))
-        draw.text((title_x, title_y), title_text, font=title_font, fill=(255, 255, 255))
-        
-        # Subtitle
-        subtitle_text = "UPSC & सरकारी परीक्षा"
-        subtitle_bbox = draw.textbbox((0, 0), subtitle_text, font=subtitle_font)
-        subtitle_w = subtitle_bbox[2] - subtitle_bbox[0]
-        subtitle_x = (self.width - subtitle_w) // 2
-        subtitle_y = 600
-        
-        draw.text((subtitle_x + 5, subtitle_y + 5), subtitle_text, font=subtitle_font, fill=(0, 0, 0))
-        draw.text((subtitle_x, subtitle_y), subtitle_text, font=subtitle_font, fill=(255, 200, 80))
+        # NO TEXT ON IMAGE - Keep it clean!
         
         img.save(output_path, quality=95)
-        print(f"   ✅ Background processed")
+        print(f"   ✅ Clean background ready")
         return output_path
     
-    def create_solid_background(self, output_path):
-        """Fallback: Create solid color background"""
+    def create_professional_gradient(self, output_path):
+        """Clean professional gradient background"""
         img = Image.new('RGB', (self.width, self.height), color='#0a1628')
         draw = ImageDraw.Draw(img)
         
-        # Gradient
+        # Smooth gradient
         for y in range(self.height):
-            shade = int(10 + (30 - 10) * (y / self.height))
-            draw.line([(0, y), (self.width, y)], fill=(shade, shade + 8, shade + 20))
+            r = int(10 + (25 - 10) * (y / self.height))
+            g = int(16 + (40 - 16) * (y / self.height))
+            b = int(40 + (70 - 40) * (y / self.height))
+            draw.line([(0, y), (self.width, y)], fill=(r, g, b))
         
-        # Borders
-        border = 25
+        # Tricolor borders
+        border = 30
         draw.rectangle([(0, 0), (self.width, border)], fill='#FF9933')
         draw.rectangle([(0, border), (self.width, border * 2)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border * 2), (self.width, self.height - border)], fill='#FFFFFF')
         draw.rectangle([(0, self.height - border), (self.width, self.height)], fill='#138808')
-        
-        # Text
-        try:
-            title_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 200)
-            subtitle_font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 110)
-        except:
-            title_font = subtitle_font = ImageFont.load_default()
-        
-        title_text = "Daily Current Affairs"
-        title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-        title_w = title_bbox[2] - title_bbox[0]
-        
-        draw.text(((self.width - title_w) // 2 + 8, 358), title_text, font=title_font, fill=(0, 0, 0))
-        draw.text(((self.width - title_w) // 2, 350), title_text, font=title_font, fill=(255, 255, 255))
-        
-        subtitle_text = "UPSC & सरकारी परीक्षा"
-        subtitle_bbox = draw.textbbox((0, 0), subtitle_text, font=subtitle_font)
-        subtitle_w = subtitle_bbox[2] - subtitle_bbox[0]
-        
-        draw.text(((self.width - subtitle_w) // 2 + 5, 605), subtitle_text, font=subtitle_font, fill=(0, 0, 0))
-        draw.text(((self.width - subtitle_w) // 2, 600), subtitle_text, font=subtitle_font, fill=(255, 200, 80))
         
         img.save(output_path, quality=95)
         return output_path
@@ -297,7 +231,7 @@ class UPSCVideoCreator:
             ssml = f"""
             <speak version='1.0' xml:lang='hi-IN'>
                 <voice name='hi-IN-MadhurNeural'>
-                    <prosody rate='0.90' pitch='+0%'>
+                    <prosody rate='0.88' pitch='+0%'>
                         {text}
                     </prosody>
                 </voice>
