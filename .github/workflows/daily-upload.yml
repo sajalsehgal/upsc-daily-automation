@@ -1,0 +1,51 @@
+name: Daily UPSC Current Affairs
+
+on:
+  schedule:
+    # Run every day at 1:00 AM UTC (6:30 AM IST)
+    - cron: '0 1 * * *'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  create-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install feedparser requests pillow azure-cognitiveservices-speech python-dotenv beautifulsoup4
+        pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client
+        sudo apt-get install -y ffmpeg
+    
+    - name: Create .env file
+      run: |
+        echo "AZURE_SPEECH_KEY=${{ secrets.AZURE_SPEECH_KEY }}" >> .env
+        echo "AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }}" >> .env
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+    
+    - name: Create YouTube credentials
+      run: |
+        mkdir -p config
+        echo '${{ secrets.YOUTUBE_OAUTH }}' > config/youtube-oauth.json
+        echo '${{ secrets.YOUTUBE_TOKEN }}' | base64 -d > youtube-token.pickle
+    
+    - name: Run daily automation
+      run: |
+        python3 scripts/run_upsc_daily.py
+    
+    - name: Upload to YouTube
+      run: |
+        python3 scripts/upload_youtube_auto.py
+    
+    - name: Clean up
+      run: |
+        rm -rf output/upsc/chunks
+        rm youtube-token.pickle

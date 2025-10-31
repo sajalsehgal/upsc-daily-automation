@@ -1,0 +1,15 @@
+# Secrets and credentials
+.env
+*.pickle
+config/youtube-oauth.json
+youtube-token.pickle
+
+# Output files
+output/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
